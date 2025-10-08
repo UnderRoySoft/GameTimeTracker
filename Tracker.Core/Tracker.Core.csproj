@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Serilog" Version="4.3.0" />
+    <PackageReference Include="System.Management" Version="9.0.9" />
+    <PackageReference Include="Vanara.PInvoke.User32" Version="4.2.1" />
+  </ItemGroup>
+
+</Project>
