@@ -1,0 +1,12 @@
+# Build artifacts
+**/bin/
+**/obj/
+
+# VS & user files
+.vs/
+*.user
+*.suo
+
+# Logs
+*.log
+Logs/
