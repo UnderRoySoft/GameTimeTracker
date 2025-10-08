@@ -1,0 +1,13 @@
+root = true
+
+[*.cs]
+dotnet_diagnostic.CA1822.severity = suggestion
+dotnet_diagnostic.CS8618.severity = warning
+dotnet_style_qualification_for_field = false:suggestion
+dotnet_style_qualification_for_property = false:suggestion
+dotnet_style_qualification_for_method = false:suggestion
+dotnet_style_qualification_for_event = false:suggestion
+dotnet_style_null_propagation = true:suggestion
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
