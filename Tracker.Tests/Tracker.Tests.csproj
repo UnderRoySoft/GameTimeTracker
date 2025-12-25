@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -24,6 +24,12 @@
     <ProjectReference Include="..\Tracker.Core\Tracker.Core.csproj" />
     <ProjectReference Include="..\Tracker.Data\Tracker.Data.csproj" />
     <ProjectReference Include="..\Tracker.IPC\Tracker.IPC.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Data\" />
+    <Folder Include="Sessions\" />
+    <Folder Include="Rules\" />
   </ItemGroup>
 
 </Project>
