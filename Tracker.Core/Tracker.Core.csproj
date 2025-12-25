@@ -7,6 +7,19 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="obj\Debug\net8.0\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs" />
+    <Compile Include="obj\Debug\net8.0\Tracker.Core.AssemblyInfo.cs" />
+    <Compile Include="obj\Debug\net8.0\Tracker.Core.GlobalUsings.g.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="bin\Debug\net8.0\Tracker.Core.deps.json" />
+    <Content Include="obj\Debug\net8.0\Tracker.Core.csproj.FileListAbsolute.txt" />
+    <Content Include="obj\project.assets.json" />
+    <Content Include="obj\Tracker.Core.csproj.nuget.dgspec.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Serilog" Version="4.3.0" />
     <PackageReference Include="System.Management" Version="9.0.9" />
     <PackageReference Include="Vanara.PInvoke.User32" Version="4.2.1" />
@@ -14,6 +27,23 @@
 
   <ItemGroup>
     <Folder Include="Services\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="bin\Debug\net8.0\Tracker.Core.dll" />
+    <None Include="bin\Debug\net8.0\Tracker.Core.pdb" />
+    <None Include="obj\Debug\net8.0\refint\Tracker.Core.dll" />
+    <None Include="obj\Debug\net8.0\ref\Tracker.Core.dll" />
+    <None Include="obj\Debug\net8.0\Tracker.Core.AssemblyInfoInputs.cache" />
+    <None Include="obj\Debug\net8.0\Tracker.Core.assets.cache" />
+    <None Include="obj\Debug\net8.0\Tracker.Core.csproj.AssemblyReference.cache" />
+    <None Include="obj\Debug\net8.0\Tracker.Core.csproj.CoreCompileInputs.cache" />
+    <None Include="obj\Debug\net8.0\Tracker.Core.dll" />
+    <None Include="obj\Debug\net8.0\Tracker.Core.GeneratedMSBuildEditorConfig.editorconfig" />
+    <None Include="obj\Debug\net8.0\Tracker.Core.pdb" />
+    <None Include="obj\project.nuget.cache" />
+    <None Include="obj\Tracker.Core.csproj.nuget.g.props" />
+    <None Include="obj\Tracker.Core.csproj.nuget.g.targets" />
   </ItemGroup>
 
 </Project>
