@@ -1,23 +1,32 @@
-﻿using System.Text;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+﻿using System.Windows;
+using Tracker.UI.ViewModels;
 
-namespace Tracker.UI;
-
-/// <summary>
-/// Interaction logic for MainWindow.xaml
-/// </summary>
-public partial class MainWindow : Window
+namespace Tracker.UI
 {
-    public MainWindow()
+    public partial class MainWindow : Window
     {
-        InitializeComponent();
+        public MainWindow(MainViewModel vm)
+        {
+            InitializeComponent();
+            DataContext = vm;
+
+            Loaded += async (_, __) =>
+            {
+                await vm.Dashboard.LoadAsync();
+                await vm.Rules.LoadAsync();
+            };
+        }
+
+        private async void DashboardRefresh_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainViewModel vm)
+                await vm.Dashboard.LoadAsync();
+        }
+
+        private async void RulesRefresh_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainViewModel vm)
+                await vm.Rules.LoadAsync();
+        }
     }
 }

@@ -39,35 +39,36 @@ namespace Tracker.Data.Repositories
         }
 
         /// <summary>
-        /// Finds matching GameId for a given executable name.
-        /// Returns null if no rule matches.
+        /// Returns GameId if executable_name matches; otherwise null.
         /// </summary>
         public async Task<long?> MatchGameIdByExeAsync(string executableName)
         {
             await using var conn = _factory.Create();
             await conn.OpenAsync();
 
-            // Highest priority wins (lowest number = higher priority if you prefer; here we use DESC for simplicity)
-            var gameId = await conn.ExecuteScalarAsync<long?>(
+            return await conn.ExecuteScalarAsync<long?>(
                 @"SELECT game_id
                   FROM executable_rules
                   WHERE LOWER(executable_name) = LOWER(@exe)
                   ORDER BY priority DESC
                   LIMIT 1;",
                 new { exe = executableName });
-
-            return gameId;
         }
 
-        public async Task<IReadOnlyList<(long Id, long GameId, string ExecutableName, int Priority)>> ListRulesAsync()
+        public async Task<IReadOnlyList<(long RuleId, string GameName, string ExecutableName, int Priority)>> ListRulesWithGameAsync()
         {
             await using var conn = _factory.Create();
             await conn.OpenAsync();
 
-            var rows = await conn.QueryAsync<(long Id, long GameId, string ExecutableName, int Priority)>(
-                @"SELECT id AS Id, game_id AS GameId, executable_name AS ExecutableName, priority AS Priority
-                  FROM executable_rules
-                  ORDER BY priority DESC, id ASC;");
+            var rows = await conn.QueryAsync<(long RuleId, string GameName, string ExecutableName, int Priority)>(
+                @"SELECT
+                      r.id AS RuleId,
+                      g.name AS GameName,
+                      r.executable_name AS ExecutableName,
+                      r.priority AS Priority
+                  FROM executable_rules r
+                  JOIN games g ON g.id = r.game_id
+                  ORDER BY r.priority DESC, g.name ASC, r.executable_name ASC;");
 
             return rows.AsList();
         }

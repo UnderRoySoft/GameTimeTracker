@@ -1,12 +1,63 @@
 ﻿<Window x:Class="Tracker.UI.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:Tracker.UI"
-        mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="GameTimeTracker" Height="520" Width="820">
+    <Grid Margin="12">
+        <TabControl>
+            <TabItem Header="Dashboard">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <Button Width="120" Height="28" Content="Refresh" Click="DashboardRefresh_Click"/>
+                        <TextBlock Margin="12,0,0,0" VerticalAlignment="Center"
+                                   Text="{Binding Dashboard.Status}"/>
+                    </StackPanel>
+
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding Dashboard.TodayTotals}"
+                              AutoGenerateColumns="False" IsReadOnly="True">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Game" Binding="{Binding Game}" Width="*"/>
+                            <DataGridTextColumn Header="Active" Binding="{Binding Active}" Width="120"/>
+                            <DataGridTextColumn Header="Idle" Binding="{Binding Idle}" Width="120"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Rules">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="Add rule (EXE name only, e.g. witcher.exe)" FontWeight="SemiBold"/>
+
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,8,0,8">
+                        <TextBox Width="220" Height="28" Margin="0,0,8,0"
+                                 Text="{Binding Rules.GameName, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBox Width="180" Height="28" Margin="0,0,8,0"
+                                 Text="{Binding Rules.ExeName, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBox Width="80" Height="28" Margin="0,0,8,0"
+                                 Text="{Binding Rules.Priority, UpdateSourceTrigger=PropertyChanged}" />
+                        <Button Width="120" Height="28" Content="Add"
+                                Command="{Binding Rules.AddRuleCommand}" />
+                        <Button Width="120" Height="28" Margin="8,0,0,0" Content="Refresh"
+                                Click="RulesRefresh_Click" />
+                    </StackPanel>
+
+                    <ListBox Grid.Row="2" ItemsSource="{Binding Rules.RulesList}"/>
+
+                    <TextBlock Grid.Row="3" Margin="0,8,0,0"
+                               Text="{Binding Rules.Status}"/>
+                </Grid>
+            </TabItem>
+        </TabControl>
     </Grid>
 </Window>
