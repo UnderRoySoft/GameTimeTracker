@@ -2,12 +2,9 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-
 using Tracker.Core.Abstractions;
 using Tracker.Core.Services;
-
 using Tracker.Data.Repositories;
-
 
 namespace Tracker.Core.Tracking
 {
@@ -30,6 +27,9 @@ namespace Tracker.Core.Tracking
         private long? _activeSessionId;
         private int _idleSecondsAccumulated;
 
+        // For throttled “alive” logging
+        private DateTimeOffset _lastHeartbeatUtc = DateTimeOffset.MinValue;
+
         public TrackingCoordinator(
             IForegroundAppDetector foreground,
             InputIdleDetector idle,
@@ -46,68 +46,146 @@ namespace Tracker.Core.Tracking
 
         public async Task RunAsync(TimeSpan pollInterval, TimeSpan idleThreshold, CancellationToken ct)
         {
-            _logger.LogInformation("TrackingCoordinator started. Poll={Poll}s IdleThreshold={Idle}s",
+            _logger.LogInformation(
+                "TrackingCoordinator started. Poll={Poll}s IdleThreshold={Idle}s",
                 pollInterval.TotalSeconds, idleThreshold.TotalSeconds);
 
-            while (!ct.IsCancellationRequested)
+            try
             {
-                var fg = _foreground.GetCurrentForegroundApp();
-
-                // If we have no foreground window, treat as "no game"
-                var exe = fg?.ProcessName;
-
-                long? matchedGameId = null;
-                if (!string.IsNullOrWhiteSpace(exe))
+                while (!ct.IsCancellationRequested)
                 {
-                    matchedGameId = await _rules.MatchGameIdByExeAsync(exe);
-                }
+                    // Heartbeat every ~10 seconds so you can confirm the loop is alive in publish logs
+                    var nowUtc = DateTimeOffset.UtcNow;
+                    if ((nowUtc - _lastHeartbeatUtc).TotalSeconds >= 10)
+                    {
+                        _lastHeartbeatUtc = nowUtc;
+                        _logger.LogInformation(
+                            "Heartbeat. ActiveGameId={GameId} ActiveSessionId={SessionId} TotalIdle={Idle}s",
+                            _activeGameId, _activeSessionId, _idleSecondsAccumulated);
+                    }
 
-                // Handle game change / exit
-                if (matchedGameId != _activeGameId)
-                {
-                    // Stop previous session if any
+                    var fg = _foreground.GetCurrentForegroundApp();
+
+                    // Foreground might be null (no window)
+                    var rawExe = fg?.ProcessName;
+
+                    // Normalize exe to match rules (rules expect "something.exe")
+                    var exe = NormalizeExeName(rawExe);
+
+                    long? matchedGameId = null;
+                    if (!string.IsNullOrWhiteSpace(exe))
+                    {
+                        matchedGameId = await _rules.MatchGameIdByExeAsync(exe);
+
+                        // Helpful when debugging rule mismatches
+                        _logger.LogDebug("Foreground exe detected. Raw={RawExe} Normalized={Exe} MatchedGameId={GameId}",
+                            rawExe, exe, matchedGameId);
+                    }
+                    else
+                    {
+                        // Optional: helps when you see constant null foregrounds in publish
+                        _logger.LogDebug("No foreground exe detected (raw was null/empty).");
+                    }
+
+                    // Handle game change / exit
+                    if (matchedGameId != _activeGameId)
+                    {
+                        // Stop previous session if any
+                        if (_activeSessionId.HasValue)
+                        {
+                            await _sessions.StopSessionAsync(_activeSessionId.Value, _idleSecondsAccumulated);
+
+                            _logger.LogInformation(
+                                "Session stopped. PrevGameId={GameId} SessionId={SessionId} IdleSeconds={Idle}",
+                                _activeGameId, _activeSessionId.Value, _idleSecondsAccumulated);
+                        }
+
+                        _activeGameId = matchedGameId;
+                        _activeSessionId = null;
+                        _idleSecondsAccumulated = 0;
+
+                        // Start new session if a game is matched
+                        if (_activeGameId.HasValue)
+                        {
+                            _activeSessionId = await _sessions.StartSessionAsync(_activeGameId.Value, source: "focus");
+
+                            _logger.LogInformation(
+                                "Session started. GameId={GameId} SessionId={SessionId} Exe={Exe}",
+                                _activeGameId.Value, _activeSessionId.Value, exe);
+                        }
+                        else
+                        {
+                            _logger.LogInformation("No matched game. Tracking idle (no active session). Exe={Exe}", exe);
+                        }
+                    }
+
+                    // If session active, accumulate idle
                     if (_activeSessionId.HasValue)
                     {
-                        await _sessions.StopSessionAsync(_activeSessionId.Value, _idleSecondsAccumulated);
-                        _logger.LogInformation("Session stopped. SessionId={SessionId} IdleSeconds={Idle}",
-                            _activeSessionId.Value, _idleSecondsAccumulated);
+                        var idle = _idle.GetIdleTime();
+                        if (idle >= idleThreshold)
+                        {
+                            // Accumulate only whole seconds from poll interval
+                            _idleSecondsAccumulated += (int)Math.Max(0, pollInterval.TotalSeconds);
+
+                            _logger.LogDebug(
+                                "Idle accumulating. SessionId={SessionId} IdleNow={IdleSeconds}s TotalIdle={TotalIdle}s",
+                                _activeSessionId.Value, (int)idle.TotalSeconds, _idleSecondsAccumulated);
+                        }
                     }
 
-                    _activeGameId = matchedGameId;
-                    _activeSessionId = null;
-                    _idleSecondsAccumulated = 0;
-
-                    // Start new session if a game is matched
-                    if (_activeGameId.HasValue)
+                    // IMPORTANT: Task.Delay(pollInterval, ct) throws when ct is cancelled.
+                    // We catch it so we can gracefully stop the active session below.
+                    try
                     {
-                        _activeSessionId = await _sessions.StartSessionAsync(_activeGameId.Value, source: "focus");
-                        _logger.LogInformation("Session started. GameId={GameId} SessionId={SessionId} Exe={Exe}",
-                            _activeGameId.Value, _activeSessionId.Value, exe);
+                        await Task.Delay(pollInterval, ct);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
                     }
                 }
-
-                // If session active, accumulate idle
+            }
+            catch (Exception ex)
+            {
+                // Let UiTrackingHost see it too (it logs Task fault). This also logs in ILogger pipeline.
+                _logger.LogError(ex, "TrackingCoordinator crashed.");
+                throw;
+            }
+            finally
+            {
+                // Stop active session on shutdown (always runs now)
                 if (_activeSessionId.HasValue)
                 {
-                    var idle = _idle.GetIdleTime();
-                    if (idle >= idleThreshold)
+                    try
                     {
-                        _idleSecondsAccumulated += (int)pollInterval.TotalSeconds;
-                        _logger.LogDebug("Idle accumulating. SessionId={SessionId} IdleNow={IdleSeconds}s TotalIdle={TotalIdle}s",
-                            _activeSessionId.Value, (int)idle.TotalSeconds, _idleSecondsAccumulated);
+                        await _sessions.StopSessionAsync(_activeSessionId.Value, _idleSecondsAccumulated);
+                        _logger.LogInformation(
+                            "Session stopped on shutdown. SessionId={SessionId} IdleSeconds={Idle}",
+                            _activeSessionId.Value, _idleSecondsAccumulated);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed stopping session on shutdown. SessionId={SessionId}", _activeSessionId.Value);
                     }
                 }
 
-                await Task.Delay(pollInterval, ct);
+                _logger.LogInformation("TrackingCoordinator stopped.");
             }
+        }
 
-            // Stop active session on shutdown
-            if (_activeSessionId.HasValue)
-            {
-                await _sessions.StopSessionAsync(_activeSessionId.Value, _idleSecondsAccumulated);
-                _logger.LogInformation("Session stopped on shutdown. SessionId={SessionId} IdleSeconds={Idle}",
-                    _activeSessionId.Value, _idleSecondsAccumulated);
-            }
+        private static string? NormalizeExeName(string? processName)
+        {
+            if (string.IsNullOrWhiteSpace(processName))
+                return null;
+
+            var trimmed = processName.Trim();
+
+            // Some APIs already return "something.exe", others return "something"
+            if (!trimmed.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                trimmed += ".exe";
+
+            return trimmed;
         }
     }
 }

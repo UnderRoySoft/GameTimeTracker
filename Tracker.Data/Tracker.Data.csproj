@@ -9,6 +9,7 @@
 	<ItemGroup>
 		<PackageReference Include="Dapper" Version="2.1.66" />
 		<PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.9" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.3" />
 	</ItemGroup>
 
 	<!-- Embed SQL schema so DbInitializer can load it -->

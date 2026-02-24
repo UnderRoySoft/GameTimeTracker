@@ -1,70 +1,120 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.ObjectModel;
 using System.Threading.Tasks;
-using System.Xml.Linq;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Tracker.Data.Repositories;
 
 namespace Tracker.UI.ViewModels
 {
-    public sealed partial class RulesViewModel : ObservableObject
+    public partial class RulesViewModel : ObservableObject
     {
-        private readonly GameRepository _games;
         private readonly RuleRepository _rules;
+        private readonly GameRepository _games;
 
-        public ObservableCollection<string> RulesList { get; } = new();
+        public ObservableCollection<RuleRowViewModel> Items { get; } = new();
 
-        [ObservableProperty] private string _gameName = "";
-        [ObservableProperty] private string _exeName = "";
-        [ObservableProperty] private int _priority = 1000;
-        [ObservableProperty] private string _status = "Ready";
+        [ObservableProperty] private string gameName = "";
+        [ObservableProperty] private string exeName = "";
+        [ObservableProperty] private int priority = 100;
 
-        public RulesViewModel(GameRepository games, RuleRepository rules)
+        public RulesViewModel(RuleRepository rules, GameRepository games)
         {
-            _games = games;
             _rules = rules;
+            _games = games;
         }
 
         public async Task LoadAsync()
         {
-            Status = "Loading…";
-            RulesList.Clear();
+            Items.Clear();
 
             var rows = await _rules.ListRulesWithGameAsync();
-            foreach (var r in rows)
-                RulesList.Add($"{r.GameName}  ←  {r.ExecutableName}   (prio {r.Priority})");
 
-            Status = $"Loaded {RulesList.Count} rule(s).";
+            foreach (var r in rows)
+            {
+                Items.Add(new RuleRowViewModel
+                {
+                    RuleId = r.RuleId,
+                    GameName = r.GameName,
+                    ExecutableName = r.ExecutableName,
+                    Priority = r.Priority
+                });
+            }
         }
 
         [RelayCommand]
-        private async Task AddRuleAsync()
+        private async Task AddAsync()
         {
-            var g = GameName?.Trim();
-            var e = ExeName?.Trim();
-
-            if (string.IsNullOrWhiteSpace(g) || string.IsNullOrWhiteSpace(e))
+            try
             {
-                Status = "Game name and EXE name are required (e.g. witcher.exe).";
-                return;
-            }
+                var g = (GameName ?? "").Trim();
+                var e = (ExeName ?? "").Trim();
 
-            // Force exe name only (no full path)
-            if (e.Contains("\\") || e.Contains("/"))
+                if (string.IsNullOrWhiteSpace(g))
+                {
+                    MessageBox.Show("Game name is empty.");
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(e))
+                {
+                    MessageBox.Show("Exe name is empty. Use e.g. witcher.exe (NOT full path).");
+                    return;
+                }
+
+                if (e.Contains("\\") || e.Contains("/"))
+                    e = System.IO.Path.GetFileName(e);
+
+                e = e.Trim().ToLowerInvariant();
+
+                var gameId = await _games.CreateOrGetAsync(g);
+                await _rules.AddRuleAsync(gameId, e, Priority);
+
+                await LoadAsync();
+
+                GameName = "";
+                ExeName = "";
+                Priority = 100;
+            }
+            catch (Exception ex)
             {
-                Status = "Use EXE name only (e.g. witcher.exe), not a full path.";
-                return;
+                MessageBox.Show(ex.ToString(), "Add rule failed");
             }
-
-            Status = "Saving…";
-            var gameId = await _games.CreateOrGetAsync(g);
-            await _rules.AddRuleAsync(gameId, e, Priority);
-
-            GameName = "";
-            ExeName = "";
-
-            await LoadAsync();
-            Status = "Rule added.";
         }
+
+        // ✅ NEW: Delete command (generated name: DeleteCommand)
+        [RelayCommand]
+        private async Task DeleteAsync(long ruleId)
+        {
+            try
+            {
+                if (ruleId <= 0) return;
+
+                var confirm = MessageBox.Show(
+                    $"Delete rule #{ruleId}?",
+                    "Confirm delete",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (confirm != MessageBoxResult.Yes)
+                    return;
+
+                await _rules.DeleteRuleAsync(ruleId);
+                await LoadAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Delete rule failed");
+            }
+        }
+    }
+
+    public sealed class RuleRowViewModel : ObservableObject
+    {
+        public long RuleId { get; set; }
+        public string GameName { get; set; } = "";
+        public string ExecutableName { get; set; } = "";
+        public int Priority { get; set; }
     }
 }

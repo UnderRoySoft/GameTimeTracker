@@ -1,54 +1,68 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Tracker.Data.Repositories;
 
 namespace Tracker.UI.ViewModels
 {
-    public sealed partial class DashboardViewModel : ObservableObject
+    public partial class DashboardViewModel : ObservableObject
     {
         private readonly SessionRepository _sessions;
+        private readonly GameRepository _games;
 
-        public ObservableCollection<GameTotalRow> TodayTotals { get; } = new();
+        public ObservableCollection<DashboardRowViewModel> Games { get; } = new();
 
-        [ObservableProperty]
-        private string _status = "Ready";
-
-        public DashboardViewModel(SessionRepository sessions)
+        public DashboardViewModel(SessionRepository sessions, GameRepository games)
         {
             _sessions = sessions;
+            _games = games;
         }
 
         public async Task LoadAsync()
         {
-            Status = "Loading…";
-            TodayTotals.Clear();
+            var totals = await _sessions.GetTotalsAllTimeAsync();
 
-            // Use UTC day for now (simple + consistent with DB).
-            var utcDay = DateTime.UtcNow.Date;
+            Games.Clear();
 
-            var rows = await _sessions.GetTotalsForUtcDayAsync(utcDay);
-
-            foreach (var r in rows)
+            foreach (var t in totals)
             {
-                TodayTotals.Add(new GameTotalRow(
-                    Game: r.GameName,
-                    Active: FormatSeconds(r.ActiveSeconds),
-                    Idle: FormatSeconds(r.IdleSeconds)
-                ));
+                Games.Add(new DashboardRowViewModel
+                {
+                    GameId = t.GameId,
+                    GameName = t.GameName,
+                    ActiveSeconds = t.ActiveSeconds,
+                    IdleSeconds = t.IdleSeconds
+                });
             }
-
-            Status = $"Loaded {TodayTotals.Count} game(s) for today (UTC).";
         }
 
-        private static string FormatSeconds(long seconds)
+        // ✅ NEW: delete game (and its rules + sessions)
+        [RelayCommand]
+        private async Task DeleteGameAsync(long gameId)
         {
-            if (seconds < 0) seconds = 0;
-            var ts = TimeSpan.FromSeconds(seconds);
-            if (ts.TotalHours >= 1) return $"{(int)ts.TotalHours}h {ts.Minutes}m";
-            if (ts.TotalMinutes >= 1) return $"{ts.Minutes}m {ts.Seconds}s";
-            return $"{ts.Seconds}s";
+            try
+            {
+                if (gameId <= 0) return;
+
+                var confirm = MessageBox.Show(
+                    $"Delete game #{gameId} and ALL its sessions + rules?\n\nThis cannot be undone.",
+                    "Confirm delete",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (confirm != MessageBoxResult.Yes)
+                    return;
+
+                await _games.DeleteGameCascadeAsync(gameId);
+                await LoadAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Delete game failed");
+            }
         }
     }
 }

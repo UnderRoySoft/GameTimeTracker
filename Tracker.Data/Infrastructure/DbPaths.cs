@@ -5,21 +5,20 @@ namespace Tracker.Data.Infrastructure
 {
     public static class DbPaths
     {
-        /// <summary>
-        /// Returns a stable per-user app data folder, e.g.
-        /// C:\Users\user\AppData\Local\GameTimeTracker
-        /// </summary>
-        public static string GetAppDataDirectory()
+        private const string AppFolderName = "GameTimeTracker";
+        private const string DbFileName = "gametime-tracker.sqlite";
+
+        public static string GetAppDataFolder()
         {
-            var baseDir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var appDir = Path.Combine(baseDir, "GameTimeTracker");
-            Directory.CreateDirectory(appDir);
-            return appDir;
+            var root = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var folder = Path.Combine(root, AppFolderName);
+            Directory.CreateDirectory(folder);
+            return folder;
         }
 
         public static string GetDatabaseFilePath()
         {
-            return Path.Combine(GetAppDataDirectory(), "gametime-tracker.sqlite");
+            return Path.Combine(GetAppDataFolder(), DbFileName);
         }
     }
 }

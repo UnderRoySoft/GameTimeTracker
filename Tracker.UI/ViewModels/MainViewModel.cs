@@ -1,9 +1,14 @@
-﻿namespace Tracker.UI.ViewModels
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+
+namespace Tracker.UI.ViewModels
 {
-    public sealed class MainViewModel
+    public partial class MainViewModel : ObservableObject
     {
         public DashboardViewModel Dashboard { get; }
         public RulesViewModel Rules { get; }
+
+        [ObservableProperty]
+        private string uiStatus = "Ready";
 
         public MainViewModel(DashboardViewModel dashboard, RulesViewModel rules)
         {

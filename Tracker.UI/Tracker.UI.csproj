@@ -1,28 +1,33 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <ItemGroup>
-    <ProjectReference Include="..\Tracker.Core\Tracker.Core.csproj" />
-    <ProjectReference Include="..\Tracker.Data\Tracker.Data.csproj" />
-    <ProjectReference Include="..\Tracker.IPC\Tracker.IPC.csproj" />
-  </ItemGroup>
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<UseWPF>true</UseWPF>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<ApplicationIcon>Assets\app.ico</ApplicationIcon>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.3" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.3" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Tracker.Core\Tracker.Core.csproj" />
+		<ProjectReference Include="..\Tracker.Data\Tracker.Data.csproj" />
+		<ProjectReference Include="..\Tracker.IPC\Tracker.IPC.csproj" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Converters\" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+		<PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="2.0.1" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.3" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.3" />
+	</ItemGroup>
 
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <UseWPF>true</UseWPF>
-  </PropertyGroup>
+	<!-- Publish ALL assets (incl. tray.ico) into publish\Assets\... -->
+	<ItemGroup>
+		<Content Include="Assets\**\*">
+			<CopyToPublishDirectory>Always</CopyToPublishDirectory>
+		</Content>
+	</ItemGroup>
 
 </Project>
