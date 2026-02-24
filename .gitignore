@@ -1,12 +1,8 @@
-# Build artifacts
 **/bin/
 **/obj/
-
-# VS & user files
 .vs/
 *.user
 *.suo
-
-# Logs
+*.db
+*.sqlite
 *.log
-Logs/
